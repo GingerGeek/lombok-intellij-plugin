@@ -199,6 +199,10 @@ public class LombokLightClassBuilder extends LightPsiClassBuilder implements Psi
 
     LombokLightClassBuilder that = (LombokLightClassBuilder) o;
 
+    if(getNavigationElement() != this && !getNavigationElement().equals(that.getNavigationElement())) {
+      return false;
+    }
+
     return myQualifiedName.equals(that.myQualifiedName);
   }
 
