@@ -2,6 +2,7 @@ package de.plushnikov.intellij.plugin.psi;
 
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.java.JavaLanguage;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.CheckUtil;
@@ -18,16 +19,23 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Plushnikov Michail
  */
 public class LombokLightMethodBuilder extends LightMethodBuilder {
+  private static final Logger LOG = Logger.getInstance(LombokLightMethodBuilder.class);
+
   private PsiMethod myMethod;
   private ASTNode myASTNode;
   private PsiCodeBlock myBodyCodeBlock;
   // used to simplify comparing of returnType in equal method
   private String myReturnTypeAsText;
+
+  private static final AtomicLong ids = new AtomicLong(0);
+  private final long llmbID = ids.incrementAndGet();
+  private final long created = System.currentTimeMillis();
 
   public LombokLightMethodBuilder(@NotNull PsiManager manager, @NotNull String name) {
     super(manager, JavaLanguage.INSTANCE, name,
@@ -36,6 +44,7 @@ public class LombokLightMethodBuilder extends LightMethodBuilder {
       new LombokLightReferenceListBuilder(manager, JavaLanguage.INSTANCE, PsiReferenceList.Role.THROWS_LIST),
       new LightTypeParameterListBuilder(manager, JavaLanguage.INSTANCE));
     setBaseIcon(LombokIcons.METHOD_ICON);
+    LOG.info("Create " + llmbID);
   }
 
   public LombokLightMethodBuilder withNavigationElement(PsiElement navigationElement) {
@@ -257,6 +266,15 @@ public class LombokLightMethodBuilder extends LightMethodBuilder {
   public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
     ReflectionUtil.setFinalFieldPerReflection(LightMethodBuilder.class, this, String.class, name);
     return this;
+  }
+
+  @Override
+  public boolean isValid() {
+    boolean valid = super.isValid();
+    if(!valid) {
+      LOG.warn(llmbID + ": Invalid?! -- created " + (System.currentTimeMillis() - created) + "ms ago");
+    }
+    return valid;
   }
 
   @Override

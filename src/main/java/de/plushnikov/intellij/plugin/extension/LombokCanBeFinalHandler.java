@@ -12,6 +12,9 @@ import lombok.Value;
 
 /**
  * Handler to produce a veto for elements with lombok methods behind
+ *
+ * Class member with @Setter should not be suggested to be converted to final
+ * Class members who's class is annotated with @Setter, @Data or @Value should not be suggested to be converted to final
  */
 public class LombokCanBeFinalHandler extends CanBeFinalHandler {
   @Override

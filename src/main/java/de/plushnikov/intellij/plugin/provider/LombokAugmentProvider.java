@@ -13,6 +13,7 @@ import com.intellij.psi.PsiModifierList;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.augment.PsiAugmentProvider;
+import com.intellij.psi.impl.light.LightElement;
 import com.intellij.psi.impl.source.PsiExtensibleClass;
 import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
@@ -30,6 +31,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Provides support for lombok generated elements
@@ -76,7 +78,7 @@ public class LombokAugmentProvider extends PsiAugmentProvider {
 
   @NotNull
   @Override
-  public <Psi extends PsiElement> List<Psi> getAugments(@NotNull PsiElement element, @NotNull final Class<Psi> type) {
+  public <Psi extends PsiElement> List<Psi> getAugments(@NotNull PsiElement element, @NotNull final Class<Psi> type, String nameHint) {
     final List<Psi> emptyResult = Collections.emptyList();
     if ((type != PsiClass.class && type != PsiField.class && type != PsiMethod.class) || !(element instanceof PsiExtensibleClass)) {
       return emptyResult;
@@ -84,6 +86,7 @@ public class LombokAugmentProvider extends PsiAugmentProvider {
 
     // Don't filter !isPhysical elements or code auto completion will not work
     if (!element.isValid()) {
+      log.warn("getAugment provided invalid element");
       return emptyResult;
     }
     final PsiClass psiClass = (PsiClass) element;
@@ -104,6 +107,14 @@ public class LombokAugmentProvider extends PsiAugmentProvider {
       cachedValue = CachedValuesManager.getCachedValue(element, new MethodLombokCachedValueProvider<>(type, psiClass));
     } else {
       cachedValue = CachedValuesManager.getCachedValue(element, new ClassLombokCachedValueProvider<>(type, psiClass));
+    }
+    if(cachedValue != null) {
+      for (Psi psi : cachedValue) {
+          boolean valid = psi.isValid();
+          if (!valid) {
+            log.warn("INVALID CACHED VALUE!!");
+          }
+      }
     }
     return null != cachedValue ? cachedValue : emptyResult;
   }
@@ -151,10 +162,10 @@ public class LombokAugmentProvider extends PsiAugmentProvider {
     }
 
     private Result<List<Psi>> computeIntern() {
-//      final String message = String.format("Process call for type: %s class: %s", type.getSimpleName(), psiClass.getQualifiedName());
-//      log.info(">>>" + message);
+      final String message = String.format("Process call for type: %s class: %s (%s)", type.getSimpleName(), psiClass.getQualifiedName(), Thread.currentThread().getName());
+      log.info("ENTER: " + message);
       final List<Psi> result = getPsis(psiClass, type);
-//      log.info("<<<" + message);
+      log.info("EXIT: " + message);
       return Result.create(result, psiClass);
     }
   }
